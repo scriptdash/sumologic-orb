@@ -22,7 +22,7 @@ steps:
         ###############
         # Begin Collecting
         ###############
-        DATA_URL="https://circleci.com/api/v2/workflow/$CIRCLE_WORKFLOW_ID/job?circle-token=$<< parameters.circle-token >>"
+        DATA_URL="  $<< parameters.circle-token >>"
         WF_DATA=$(curl -s "$DATA_URL")
         WF_MESSAGE=$(echo "$WF_DATA" | jq '.message')
         # Exit if no Workflow.
@@ -162,26 +162,30 @@ steps:
             then
               echo "This is the reporter job. Skipping"
             else
-              # If this job is NOT the current job, check the status
-              echo "JOB: $JOB_NAME"
-              echo "JOB NUM: $JOB_NUMBER"
-              echo "STATUS: $JOB_STATUS"
-              #####
-              # Send Job Data to SumoLogic
-              #####
-              mkdir -p /tmp/sumologic-logs/
-              ###
-              # Process Job api 1.1 Data
-              ###
-              JOB_DATA_RAW=$(curl -s "https://circleci.com/api/v1.1/project/$VCS/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME/$JOB_NUMBER?circle-token=$<< parameters.circle-token >>")
-              # removing steps and circle_yml keys from object
-              JOB_DATA_RAW=$(echo $JOB_DATA_RAW | jq 'del(.circle_yml)' | jq 'del(.steps)')
-              # manually set job name as it is currently null
-              JOB_DATA_RAW=$(echo $JOB_DATA_RAW | jq --arg JOBNAME "$JOB_NAME" '.job_name = $JOBNAME')
-              # Write the modified data to a file
-              echo $JOB_DATA_RAW > /tmp/sumologic-logs/job-collector.json
-              curl -s -X POST -T /tmp/sumologic-logs/job-collector.json $<< parameters.job-collector >>
-              ###
+              if [ "$JOB_NAME" = "'deploy'" ] && [ "$DEPLOY_BLOCKED" = true ]
+                # If this is the blocked deploy job do not gather/send information
+              else
+                # If this job is NOT the current job, check the status
+                echo "JOB: $JOB_NAME"
+                echo "JOB NUM: $JOB_NUMBER"
+                echo "STATUS: $JOB_STATUS"
+                #####
+                # Send Job Data to SumoLogic
+                #####
+                mkdir -p /tmp/sumologic-logs/
+                ###
+                # Process Job api 1.1 Data
+                ###
+                JOB_DATA_RAW=$(curl -s "https://circleci.com/api/v1.1/project/$VCS/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME/$JOB_NUMBER?circle-token=$<< parameters.circle-token >>")
+                # removing steps and circle_yml keys from object
+                JOB_DATA_RAW=$(echo $JOB_DATA_RAW | jq 'del(.circle_yml)' | jq 'del(.steps)')
+                # manually set job name as it is currently null
+                JOB_DATA_RAW=$(echo $JOB_DATA_RAW | jq --arg JOBNAME "$JOB_NAME" '.job_name = $JOBNAME')
+                # Write the modified data to a file
+                echo $JOB_DATA_RAW > /tmp/sumologic-logs/job-collector.json
+                curl -s -X POST -T /tmp/sumologic-logs/job-collector.json $<< parameters.job-collector >>
+                ###
+              fi
             fi
             echo "rerunning loop"
             i="$((i+1))"
