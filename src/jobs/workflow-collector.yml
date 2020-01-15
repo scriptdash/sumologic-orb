@@ -102,7 +102,7 @@ steps:
               if [ "$JOB_STATUS" == '"success"' ] || [ "$JOB_STATUS" == '"failed"' ];
               then
                 echo "Job $JOB_NAME $JOB_NUMBER is complete - $JOB_STATUS"
-                if [ "$JOB_STATUS" == '"failed"' ];
+                if [ "$JOB_STATUS" == '"failed"' ] && [ "$JOB_NAME" == '"security-scan"' ];
                 then
                   DEPLOY_BLOCKED=true
                 fi
@@ -111,8 +111,8 @@ steps:
                 if [ "$JOB_NAME" == '"deploy"' ] && [ "$JOB_STATUS" == '"blocked"' ] && [ "$DEPLOY_BLOCKED" == true ]
                   echo "Deploy is blocked by upstream failure and will never run"
                 else
-                  WF_FINISHED=false
                   echo "Setting status of WF_FINISHED to false"
+                  WF_FINISHED=false
                 fi
               fi
             fi
